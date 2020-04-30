@@ -11,3 +11,39 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+.row {
+  clear: both;
+  content: "";
+  display: table-row;
+}
+
+.board {
+  clear: both;
+  content: "";
+  display: table;
+}
+
+.cell {
+  display: table-cell;
+  display: table-cell;
+  border: 1px solid #999;
+  height: 34px;
+  width: 34px;
+}
+
+.tall {
+  color: red
+}
+
+.wide {
+  color: cyan
+}
+
+.small {
+  color: orange
+}
+
+.big {
+  color: purple
+}
