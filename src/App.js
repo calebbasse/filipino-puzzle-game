@@ -2,19 +2,30 @@ import React from 'react';
 import logo from './logo.svg';
 import './App.css';
 
+class Cell {
+  constructor(x, y) {
+    this.x = x
+    this.y = y
+  }
+
+  toString() {
+    return this.x.toString() + ',' + this.y.toString();
+  }
+}
+
 class Tile {
-  constructor(coor, color) {
-    this.coor = coor
+  constructor(cells, color) {
+    this.cells = cells
     this.color = color
   }
 
-  moveUp() {
-    const newCoor = this.coor.map((c) => [c[0], c[1]-1]);
-    if (this.isValidMove(newCoor)) {
-      this.coor = newCoor
+  moveUp(emptyTiles) {
+    const proposedNewCells = this.cells.map((c) => new Cell(c.x, c.y-1));
+    if (this.isValidMove(this.cells, proposedNewCells, emptyTiles)) {
+      this.cells = proposedNewCells;
     }
 
-    return this.coor
+    return this.cells, emptyTiles
   }
 
   moveDown(e0, e1) {
@@ -29,23 +40,43 @@ class Tile {
 
   }
 
-  isValidMove(newCoor) {
-    let isValid = true;
-    newCoor.forEach(function(c, index) {
-      console.log(c)
-      const x = c[0];
-      const y = c[1];
-      if (x < 0 || x > 3 || y < 0 || y > 4) {
-        isValid = false;
-        return;
+  isValidMove(currentCells, proposedNewCells, emptyTiles) {
+    
+    // Check if new tile position is within the constraints of the board
+    proposedNewCells.forEach((c) => {
+      if (c.x < 0 || c.x > 3 || c.y < 0 || c.y > 4) {
+        return false;
       }
     })
+
+
+    let requiredEmptyCells = diffBetweenTwoCellArrays(currentCells, proposedNewCells)
+    console.log(requiredEmptyCells)
+
+    let isValid = true;
+    let isEmpty = false;
+    requiredEmptyCells.forEach((rec) => {
+      isEmpty = false;
+      emptyTiles.forEach((e) => {
+        console.log("insinfef")
+        console.log(rec, e)
+        if (e.cells[0].x == rec.x && e.cells[0].y == rec.y) {
+          isEmpty = true;
+        } 
+      })
+      console.log(isEmpty)
+      if (!isEmpty) {
+        isValid = false;
+      }
+    })
+    
+    console.log("is valid ", isValid)
 
     return isValid;
   }
 }
 
-function Cell(props) {
+function CellComp(props) {
   // const style = "background: " + props.color + ";";
   return (
     <div class="cell" id={props.id} style={{background: props.tile.color}} onClick={() => props.onClick()} ></div>
@@ -56,23 +87,23 @@ class Board extends React.Component {
   constructor(props) {
     super(props);
 
-    const t0 = new Tile([[0,0], [0,1]], "cyan")
-    const t1 = new Tile([[3,0], [3,1]], "cyan")
-    const t2 = new Tile([[0,3], [0,4]], "cyan")
-    const t3 = new Tile([[3,3], [3,4]], "cyan")
+    const t0 = new Tile([new Cell(0,0), new Cell(0,1)], "cyan")
+    const t1 = new Tile([new Cell(3,0), new Cell(3,1)], "cyan")
+    const t2 = new Tile([new Cell(0,3), new Cell(0,4)], "cyan")
+    const t3 = new Tile([new Cell(3,3), new Cell(3,4)], "cyan")
 
-    const s0 = new Tile([[1,1]], "orange") 
-    const s1 = new Tile([[2,1]], "orange") 
-    const s2 = new Tile([[0,2]], "orange") 
-    const s3 = new Tile([[3,2]], "orange") 
+    const s0 = new Tile([new Cell(1,1)], "orange") 
+    const s1 = new Tile([new Cell(2,1)], "orange") 
+    const s2 = new Tile([new Cell(0,2)], "orange") 
+    const s3 = new Tile([new Cell(3,2)], "orange") 
 
-    const w0 = new Tile([[1,2], [2,2]], "brown")
-    const b0 = new Tile([[1,3], [2,3], [1,4], [2,4]], "red")
+    const w0 = new Tile([new Cell(1,2), new Cell(2,2)], "brown")
+    const b0 = new Tile([new Cell(1,3), new Cell(2,3), new Cell(1,4), new Cell(2,4)], "red")
 
-    const e0 = new Tile([[1,0]], "white")
-    const e1 = new Tile([[2,0]], "white")
+    const e0 = new Tile([new Cell(1,0)], "white")
+    const e1 = new Tile([new Cell(2,0)], "white")
 
-    const tiles = {
+    const board = {
       "0,0": t0,
       "0,1": t0,
       "1,0": e0,
@@ -97,45 +128,102 @@ class Board extends React.Component {
 
     
     this.state = {
-      tiles: tiles,
+      board: board,
       selectedTile: s0,
       emptyTiles: [e0,e1],
     };
   }
 
-  changeState() {
-    const tiles = Object.assign({}, this.state.tiles);
-    tiles["11"] = "e"
-    tiles["10"] = "s"
+  // changeState() {
+  //   const tiles = Object.assign({}, this.state.board);
+  //   tiles["11"] = "e"
+  //   tiles["10"] = "s"
+  //   this.setState({
+  //     tiles: tiles
+  //   })
+  // }
+
+  updateBoard(oldCells) {
+    const selectedTile = this.state.selectedTile
+    const board = Object.assign({}, this.state.board);
+    const emptyTiles = Array.from(this.state.emptyTiles);
+
+    console.log('updateBoard()')
+    selectedTile.cells.forEach(function(c, index) {
+      board[c.toString()] = selectedTile
+    })
+
+    const newEmptyCells = diffBetweenTwoCellArrays(selectedTile.cells, oldCells)
+
+    console.log(newEmptyCells)
+
+    newEmptyCells.forEach((c) => {
+      if (emptyTiles.includes(emptyTiles[0].cells[0])) {
+        const e0 = emptyTiles[0]
+        e0.cells[0] = c;
+        board[c.toString()] = e0
+      } else {
+        const e1 = emptyTiles[1]
+        e1.cells[0] = c;
+        board[c.toString()] = e1
+      }
+    })
+
+    console.log(emptyTiles[0], emptyTiles[1])
     this.setState({
-      tiles: tiles
+      board: board,
+      emptyTiles: emptyTiles,
+      selectedTile: selectedTile,
     })
   }
 
   moveUp() {
     const selectedTile = this.state.selectedTile
-    const newCoor = selectedTile.moveUp()
-
-    const tiles = Object.assign({}, this.state.tiles);
+    const oldCells = Array.from(selectedTile.cells)
     const emptyTiles = Array.from(this.state.emptyTiles);
+    // const board = Object.assign({}, this.state.board);
+
+    const newCells = selectedTile.moveUp(emptyTiles);
+    this.updateBoard(oldCells)
+    // newCells.forEach(function(c, index) {
+    //   board[c.toString()] = selectedTile
+    // })
+
+
+    // const newEmptyCoor = diffBetweenTwoCellArrays(newCells, oldCells)
+
+    // newEmptyCoor.forEach((c) => {
+    //   if (emptyTiles[0].coor[0] in newCells) {
+    //     const e0 = emptyTiles[0]
+    //     e0.coor[0] = c;
+    //     board[c.toString()] = e0
+    //   } else {
+    //     const e1 = emptyTiles[0]
+    //     e1.coor[0] = c;
+    //     board[c.toString()] = e1
+    //   }
+    // })
     
-    newCoor.forEach(function(c, index) {
-      tiles[c.toString()] = selectedTile
-    })
+    
 
-    emptyTiles.forEach((e) => {
-      console.log("hello")
-      console.log(e)
-      const ec = [e.coor[0], e.coor[1]+1]
-      e.coor = ec;
-      tiles[ec.toString()] = e
-    })
 
-    this.setState({
-      tiles: tiles,
-      emptyTiles: emptyTiles,
-      selectedTile: selectedTile,
-    })
+    // // emptyTiles.forEach((e) => {
+    // //   const ec = [e.coor[0][0], e.coor[0][1]+1]
+    // //   console.log(ec)
+    // //   e.coor = ec;
+    // //   tiles[ec.toString()] = e
+    // //   console.log("HELLO");
+    // //   console.log(e);
+    // // })
+
+    // this.setState({
+    //   board: board,
+    //   emptyTiles: emptyTiles,
+    //   selectedTile: selectedTile,
+    // })
+
+    // console.log(this.state)
+
   }
 
   moveDown() {
@@ -151,7 +239,7 @@ class Board extends React.Component {
   }
 
   selectTile(coor) {
-    const selectedTile = this.state.tiles[coor]
+    const selectedTile = this.state.board[coor]
     this.setState({
       selectedTile: selectedTile
     })
@@ -166,34 +254,34 @@ class Board extends React.Component {
         <button onClick={() => this.changeState()}>left</button>
         <button onClick={() => this.changeState()}>right</button> */}
         <div class="row">
-          < Cell id="0,0" tile={this.state.tiles["0,0"]} onClick={() => this.selectTile("0,0")} />
-          < Cell id="1,0" tile={this.state.tiles["1,0"]} onClick={() => this.selectTile("1,0")} />
-          < Cell id="2,0" tile={this.state.tiles["2,0"]} onClick={() => this.selectTile("2,0")} />
-          < Cell id="3,0" tile={this.state.tiles["3,0"]} onClick={() => this.selectTile("3,0")} />
+          < CellComp id="0,0" tile={this.state.board["0,0"]} onClick={() => this.selectTile("0,0")} />
+          < CellComp id="1,0" tile={this.state.board["1,0"]} onClick={() => this.selectTile("1,0")} />
+          < CellComp id="2,0" tile={this.state.board["2,0"]} onClick={() => this.selectTile("2,0")} />
+          < CellComp id="3,0" tile={this.state.board["3,0"]} onClick={() => this.selectTile("3,0")} />
         </div>
         <div class="row">
-          < Cell id="0,1" tile={this.state.tiles["0,1"]} onClick={() => this.selectTile("0,1")} />
-          < Cell id="1,1" tile={this.state.tiles["1,1"]} onClick={() => this.selectTile("1,1")} />
-          < Cell id="2,1" tile={this.state.tiles["2,1"]} onClick={() => this.selectTile("2,1")} />
-          < Cell id="3,1" tile={this.state.tiles["3,1"]} onClick={() => this.selectTile("3,1")} />
+          < CellComp id="0,1" tile={this.state.board["0,1"]} onClick={() => this.selectTile("0,1")} />
+          < CellComp id="1,1" tile={this.state.board["1,1"]} onClick={() => this.selectTile("1,1")} />
+          < CellComp id="2,1" tile={this.state.board["2,1"]} onClick={() => this.selectTile("2,1")} />
+          < CellComp id="3,1" tile={this.state.board["3,1"]} onClick={() => this.selectTile("3,1")} />
         </div>
         <div class="row">
-          < Cell id="0,2" tile={this.state.tiles["0,2"]} onClick={() => this.selectTile("0,2")} />
-          < Cell id="1,2" tile={this.state.tiles["1,2"]} onClick={() => this.selectTile("1,2")} />
-          < Cell id="2,2" tile={this.state.tiles["2,2"]} onClick={() => this.selectTile("2,2")} />
-          < Cell id="3,2" tile={this.state.tiles["3,2"]} onClick={() => this.selectTile("3,2")} />
+          < CellComp id="0,2" tile={this.state.board["0,2"]} onClick={() => this.selectTile("0,2")} />
+          < CellComp id="1,2" tile={this.state.board["1,2"]} onClick={() => this.selectTile("1,2")} />
+          < CellComp id="2,2" tile={this.state.board["2,2"]} onClick={() => this.selectTile("2,2")} />
+          < CellComp id="3,2" tile={this.state.board["3,2"]} onClick={() => this.selectTile("3,2")} />
         </div>
         <div class="row">
-          < Cell id="0,3" tile={this.state.tiles["0,3"]} onClick={() => this.selectTile("0,3")} />
-          < Cell id="1,3" tile={this.state.tiles["1,3"]} onClick={() => this.selectTile("1,3")} />
-          < Cell id="2,3" tile={this.state.tiles["2,3"]} onClick={() => this.selectTile("2,3")} />
-          < Cell id="3,3" tile={this.state.tiles["3,3"]} onClick={() => this.selectTile("3,3")} />
+          < CellComp id="0,3" tile={this.state.board["0,3"]} onClick={() => this.selectTile("0,3")} />
+          < CellComp id="1,3" tile={this.state.board["1,3"]} onClick={() => this.selectTile("1,3")} />
+          < CellComp id="2,3" tile={this.state.board["2,3"]} onClick={() => this.selectTile("2,3")} />
+          < CellComp id="3,3" tile={this.state.board["3,3"]} onClick={() => this.selectTile("3,3")} />
         </div>
         <div class="row">
-          < Cell id="0,4" tile={this.state.tiles["0,4"]} onClick={() => this.selectTile("0,4")} />
-          < Cell id="1,4" tile={this.state.tiles["1,4"]} onClick={() => this.selectTile("1,4")} />
-          < Cell id="2,4" tile={this.state.tiles["2,4"]} onClick={() => this.selectTile("2,4")} />
-          < Cell id="3,4" tile={this.state.tiles["3,4"]} onClick={() => this.selectTile("3,4")} />
+          < CellComp id="0,4" tile={this.state.board["0,4"]} onClick={() => this.selectTile("0,4")} />
+          < CellComp id="1,4" tile={this.state.board["1,4"]} onClick={() => this.selectTile("1,4")} />
+          < CellComp id="2,4" tile={this.state.board["2,4"]} onClick={() => this.selectTile("2,4")} />
+          < CellComp id="3,4" tile={this.state.board["3,4"]} onClick={() => this.selectTile("3,4")} />
         </div>
       </div>
     );
@@ -226,7 +314,25 @@ class Board extends React.Component {
 //   );
 // }
 
+function diffBetweenTwoCellArrays(cellsA, cellsB) {
+  let celldD = new Array();
+  let exclude = false;
+  cellsB.forEach((cB) => {
+    exclude = false;
+    cellsA.forEach((cA) => {
+      if (cA.x == cB.x && cA.y == cB.y) {
+        exclude = true;
+      }
+    })
 
+    if (!exclude) {
+      celldD.push((cB))
+    }
+
+  })
+
+  return celldD
+}
 
 export default Board;
 
