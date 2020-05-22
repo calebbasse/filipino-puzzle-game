@@ -2,6 +2,8 @@ import React from 'react';
 import logo from './logo.svg';
 import './App.css';
 
+import KeyboardEventHandler from 'react-keyboard-event-handler';
+
 class Cell {
   constructor(x, y) {
     this.x = x
@@ -10,6 +12,14 @@ class Cell {
 
   toString() {
     return this.x.toString() + ',' + this.y.toString();
+  }
+
+  equals(cellB) {
+    if (this.x == cellB.x && this.y == cellB.y) {
+      return true;
+    } else {
+      return false;
+    }
   }
 }
 
@@ -24,20 +34,27 @@ class Tile {
     if (this.isValidMove(this.cells, proposedNewCells, emptyTiles)) {
       this.cells = proposedNewCells;
     }
-
-    return this.cells, emptyTiles
   }
 
-  moveDown(e0, e1) {
-
+  moveDown(emptyTiles) {
+    const proposedNewCells = this.cells.map((c) => new Cell(c.x, c.y+1));
+    if (this.isValidMove(this.cells, proposedNewCells, emptyTiles)) {
+      this.cells = proposedNewCells;
+    }
   }
 
-  moveLeft(e0, e1) {
-
+  moveLeft(emptyTiles) {
+    const proposedNewCells = this.cells.map((c) => new Cell(c.x-1, c.y));
+    if (this.isValidMove(this.cells, proposedNewCells, emptyTiles)) {
+      this.cells = proposedNewCells;
+    }
   }
 
-  moveRight(e0, e1) {
-
+  moveRight(emptyTiles) {
+    const proposedNewCells = this.cells.map((c) => new Cell(c.x+1, c.y));
+    if (this.isValidMove(this.cells, proposedNewCells, emptyTiles)) {
+      this.cells = proposedNewCells;
+    }
   }
 
   isValidMove(currentCells, proposedNewCells, emptyTiles) {
@@ -49,37 +66,58 @@ class Tile {
       }
     })
 
+    // Check that the current tile isn't an empty tile
+    if (this.equals(emptyTiles[0]) || this.equals(emptyTiles[1])) {
+      return false
+    }
 
+    // Check if the movement will work based on the positioning of the tile and empty tiles
     let requiredEmptyCells = diffBetweenTwoCellArrays(currentCells, proposedNewCells)
-    console.log(requiredEmptyCells)
 
     let isValid = true;
     let isEmpty = false;
+    // console.log("requiredEmptyCells")
+    // console.log(requiredEmptyCells)
+    // console.log(emptyTiles)
     requiredEmptyCells.forEach((rec) => {
       isEmpty = false;
       emptyTiles.forEach((e) => {
-        console.log("insinfef")
-        console.log(rec, e)
         if (e.cells[0].x == rec.x && e.cells[0].y == rec.y) {
           isEmpty = true;
         } 
       })
-      console.log(isEmpty)
+      // console.log(isEmpty)
       if (!isEmpty) {
         isValid = false;
       }
     })
-    
-    console.log("is valid ", isValid)
 
     return isValid;
+  }
+
+  equals(tileB) {
+
+    let tilesEqual = true;
+    this.cells.forEach((c) => {
+      let cellFound = false;
+      tileB.cells.forEach((cB) => {
+        if (c.equals(cB)) {
+          cellFound = true;
+        }
+      })
+      if (cellFound === false) {
+        tilesEqual = false
+      }
+    })
+
+    return tilesEqual
   }
 }
 
 function CellComp(props) {
   // const style = "background: " + props.color + ";";
   return (
-    <div class="cell" id={props.id} style={{background: props.tile.color}} onClick={() => props.onClick()} ></div>
+    <div class="cell" id={props.id} style={{background: props.tile.color}} onClick={() => props.onClick()} >{props.id}</div>
   );
 }
 
@@ -148,94 +186,82 @@ class Board extends React.Component {
     const board = Object.assign({}, this.state.board);
     const emptyTiles = Array.from(this.state.emptyTiles);
 
-    console.log('updateBoard()')
     selectedTile.cells.forEach(function(c, index) {
       board[c.toString()] = selectedTile
     })
 
     const newEmptyCells = diffBetweenTwoCellArrays(selectedTile.cells, oldCells)
-
     console.log(newEmptyCells)
-
-    newEmptyCells.forEach((c) => {
-      if (emptyTiles.includes(emptyTiles[0].cells[0])) {
-        const e0 = emptyTiles[0]
-        e0.cells[0] = c;
-        board[c.toString()] = e0
-      } else {
-        const e1 = emptyTiles[1]
-        e1.cells[0] = c;
-        board[c.toString()] = e1
+    console.log(selectedTile)
+    // newEmptyCells.forEach((nec) => {
+    for (let nec in newEmptyCells) {
+      console.log("newEmpty")
+      // selectedTile.cells.forEach((stc) => {
+      for (let stc in selectedTile.cells) {
+        console.log(nec, stc, emptyTiles[0].cells[0], emptyTiles[1].cells[0])
+        if (cellsEqual(stc, emptyTiles[0].cells[0])) {
+          emptyTiles[0].cells[0] = nec;
+          board[nec.toString()] = emptyTiles[0].cells[0]
+          break
+          // emptyTiles[0] = e0
+        } else if (cellsEqual(stc, emptyTiles[1].cells[0])) {
+          emptyTiles[1].cells[0] = nec;
+          board[nec.toString()] = emptyTiles[1].cells[0]
+          break
+          // const e1 = emptyTiles[1]
+          // e1.cells[0] = nec;
+          // board[nec.toString()] = e1
+          // emptyTiles[1] = e1
+        }
+        console.log(nec, stc, emptyTiles[0].cells[0], emptyTiles[1].cells[0], "heavens")
       }
-    })
+    }
+      // if selectedTile in e0 -> move it to the new empty cell
+      // if (oldCells.includes(emptyTiles[0].cells[0])) {
+        
 
-    console.log(emptyTiles[0], emptyTiles[1])
     this.setState({
       board: board,
       emptyTiles: emptyTiles,
       selectedTile: selectedTile,
     })
+    console.log("done", emptyTiles[0].cells[0], emptyTiles[1].cells[0])
   }
 
-  moveUp() {
+  moveUp()  {
     const selectedTile = this.state.selectedTile
     const oldCells = Array.from(selectedTile.cells)
     const emptyTiles = Array.from(this.state.emptyTiles);
-    // const board = Object.assign({}, this.state.board);
 
-    const newCells = selectedTile.moveUp(emptyTiles);
+    selectedTile.moveUp(emptyTiles);
     this.updateBoard(oldCells)
-    // newCells.forEach(function(c, index) {
-    //   board[c.toString()] = selectedTile
-    // })
-
-
-    // const newEmptyCoor = diffBetweenTwoCellArrays(newCells, oldCells)
-
-    // newEmptyCoor.forEach((c) => {
-    //   if (emptyTiles[0].coor[0] in newCells) {
-    //     const e0 = emptyTiles[0]
-    //     e0.coor[0] = c;
-    //     board[c.toString()] = e0
-    //   } else {
-    //     const e1 = emptyTiles[0]
-    //     e1.coor[0] = c;
-    //     board[c.toString()] = e1
-    //   }
-    // })
-    
-    
-
-
-    // // emptyTiles.forEach((e) => {
-    // //   const ec = [e.coor[0][0], e.coor[0][1]+1]
-    // //   console.log(ec)
-    // //   e.coor = ec;
-    // //   tiles[ec.toString()] = e
-    // //   console.log("HELLO");
-    // //   console.log(e);
-    // // })
-
-    // this.setState({
-    //   board: board,
-    //   emptyTiles: emptyTiles,
-    //   selectedTile: selectedTile,
-    // })
-
-    // console.log(this.state)
-
   }
 
   moveDown() {
+    const selectedTile = this.state.selectedTile
+    const oldCells = Array.from(selectedTile.cells)
+    const emptyTiles = Array.from(this.state.emptyTiles);
 
+    selectedTile.moveDown(emptyTiles);
+    this.updateBoard(oldCells)
   }
 
   moveLeft() {
+    const selectedTile = this.state.selectedTile
+    const oldCells = Array.from(selectedTile.cells)
+    const emptyTiles = Array.from(this.state.emptyTiles);
 
+    selectedTile.moveLeft(emptyTiles);
+    this.updateBoard(oldCells)
   }
 
   moveRight() {
+    const selectedTile = this.state.selectedTile
+    const oldCells = Array.from(selectedTile.cells)
+    const emptyTiles = Array.from(this.state.emptyTiles);
 
+    selectedTile.moveRight(emptyTiles);
+    this.updateBoard(oldCells)
   }
 
   selectTile(coor) {
@@ -245,14 +271,25 @@ class Board extends React.Component {
     })
   }
 
+  keyPressed(key, e) {
+    if (key === 'w') {
+      this.moveUp()
+    } else if (key === 'a') {
+      this.moveLeft()
+    } else if (key === 's') {
+      this.moveDown()
+    } else if (key === 'd') {
+      this.moveRight()
+    }
+  }
+
   render() {
 
     return (
-      <div class="board">
-        <button onClick={() => this.moveUp()}>up</button>
-        {/* <button onClick={() => this.changeState()}>down</button>
-        <button onClick={() => this.changeState()}>left</button>
-        <button onClick={() => this.changeState()}>right</button> */}
+        <div class="board" >
+        <KeyboardEventHandler
+          handleKeys={['w', 'a', 's', 'd']}
+          onKeyEvent={(key, e) => this.keyPressed(key, e)} />
         <div class="row">
           < CellComp id="0,0" tile={this.state.board["0,0"]} onClick={() => this.selectTile("0,0")} />
           < CellComp id="1,0" tile={this.state.board["1,0"]} onClick={() => this.selectTile("1,0")} />
@@ -289,38 +326,13 @@ class Board extends React.Component {
 }
 
 
-
-// ========================================
-
-
-// function App() {
-//   return (
-//     <div className="App">
-//       <header className="App-header">
-//         <img src={logo} className="App-logo" alt="logo" />
-//         <p>
-//           Edit <code>src/App.js</code> and save to reload.
-//         </p>
-//         <a
-//           className="App-link"
-//           href="https://reactjs.org"
-//           target="_blank"
-//           rel="noopener noreferrer"
-//         >
-//           Learn React
-//         </a>
-//       </header>
-//     </div>
-//   );
-// }
-
 function diffBetweenTwoCellArrays(cellsA, cellsB) {
   let celldD = new Array();
   let exclude = false;
   cellsB.forEach((cB) => {
     exclude = false;
     cellsA.forEach((cA) => {
-      if (cA.x == cB.x && cA.y == cB.y) {
+      if (cellsEqual(cA, cB)) {
         exclude = true;
       }
     })
@@ -332,6 +344,14 @@ function diffBetweenTwoCellArrays(cellsA, cellsB) {
   })
 
   return celldD
+}
+
+function cellsEqual(cellA, cellB) {
+  if (cellA.x == cellB.x && cellA.y == cellB.y) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 export default Board;
